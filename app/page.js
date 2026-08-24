@@ -1,183 +1,239 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 
 const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), { ssr: false });
 
 export default function Home() {
-  // 1. Estados zerados (começa sem nenhuma bolinha)
+  // Estados dos dados mantidos
   const [materias, setMaterias] = useState([]);
   const [leituras, setLeituras] = useState([]);
   const [vinculos, setVinculos] = useState([]);
 
-  // 2. Estados dos campos dos formulários
-  const [novaMateria, setNovaMateria] = useState('');
-  const [novaLeitura, setNovaLeitura] = useState('');
-  
-  // Seleção de vinculos
-  const [leituraParaConectar, setLeituraParaConectar] = useState('');
-  const [materiaParaConectar, setMateriaParaConectar] = useState('');
+  // Estados dos formulários (isolados para não re-renderizar o grafo a cada letra)
+  const [formMateria, setFormMateria] = useState({ name: '', code: '' });
+  const [formLeitura, setFormLeitura] = useState({ title: '', autor: '', comentario: '' });
+  const [formVinculo, setFormVinculo] = useState({ leituraId: '', materiaId: '', comentario: '' });
 
-  // 3. Adicionar Matéria (Bolinha Verde)
-  const adicionarMateria = (e) => {
+  // 1. Adicionar Matéria
+  const handleAddMateria = (e) => {
     e.preventDefault();
-    if (!novaMateria.trim()) return;
-    const nova = {
+    if (!formMateria.name.trim()) return;
+
+    const novaMateria = {
       id: `m-${Date.now()}`,
-      name: novaMateria.trim(),
+      name: formMateria.name.trim(),
+      code: formMateria.code.trim() || 'DISC',
     };
-    setMaterias([...materias, nova]);
-    if (!materiaParaConectar) setMateriaParaConectar(nova.id);
-    setNovaMateria('');
+
+    setMaterias((prev) => [...prev, novaMateria]);
+    setFormMateria({ name: '', code: '' });
   };
 
-  // 4. Adicionar Leitura (Bolinha Rosa)
-  const adicionarLeitura = (e) => {
+  // 2. Adicionar Leitura
+  const handleAddLeitura = (e) => {
     e.preventDefault();
-    if (!novaLeitura.trim()) return;
-    const nova = {
-      id: `p-${Date.now()}`,
-      title: novaLeitura.trim(),
+    if (!formLeitura.title.trim()) return;
+
+    const novaLeitura = {
+      id: `l-${Date.now()}`,
+      title: formLeitura.title.trim(),
+      autor: formLeitura.autor.trim() || 'Autor não informado',
+      comentario: formLeitura.comentario.trim(),
     };
-    setLeituras([...leituras, nova]);
-    if (!leituraParaConectar) setLeituraParaConectar(nova.id);
-    setNovaLeitura('');
+
+    setLeituras((prev) => [...prev, novaLeitura]);
+    setFormLeitura({ title: '', autor: '', comentario: '' });
   };
 
-  // 5. Criar Linha/Vínculo entre Leitura e Matéria
-  const criarVinculo = (e) => {
+  // 3. Adicionar Vínculo entre Leitura e Matéria
+  const handleAddVinculo = (e) => {
     e.preventDefault();
-    if (!leituraParaConectar || !materiaParaConectar) return;
+    if (!formVinculo.leituraId || !formVinculo.materiaId) return;
 
-    // Evita criar o mesmo vínculo duas vezes
     const jaExiste = vinculos.some(
-      (v) => v.source === leituraParaConectar && v.target === materiaParaConectar
+      (v) => v.source === formVinculo.leituraId && v.target === formVinculo.materiaId
     );
 
-    if (!jaExiste) {
-      setVinculos([
-        ...vinculos,
-        { source: leituraParaConectar, target: materiaParaConectar }
-      ]);
+    if (jaExiste) {
+      alert('Este vínculo já foi criado!');
+      return;
     }
+
+    const novoVinculo = {
+      id: `v-${Date.now()}`,
+      source: formVinculo.leituraId,
+      target: formVinculo.materiaId,
+      comentario: formVinculo.comentario.trim(),
+    };
+
+    setVinculos((prev) => [...prev, novoVinculo]);
+    setFormVinculo({ leituraId: '', materiaId: '', comentario: '' });
   };
 
-  // 6. Montagem dinâmica do Grafo
-  const graphData = {
-    nodes: [
-      ...materias.map((m) => ({ id: m.id, name: `📗 Disciplina: ${m.name}`, group: 'materia', val: 14 })),
-      ...leituras.map((l) => ({ id: l.id, name: `🌸 Leitura: ${l.title}`, group: 'leitura', val: 8 })),
-    ],
-    links: vinculos,
-  };
+  // 4. Estrutura do Grafo memoizada (só reprocessa quando uma matéria, leitura ou vínculo for efetivamente adicionado)
+  const graphData = useMemo(() => {
+    const nodes = [
+      ...materias.map((m) => ({
+        id: m.id,
+        name: `📗 ${m.name} (${m.code})`,
+        group: 'materia',
+        val: 14,
+      })),
+      ...leituras.map((l) => ({
+        id: l.id,
+        name: `🌸 ${l.title}\n✍️ Autor: ${l.autor}`,
+        group: 'leitura',
+        val: 9,
+      })),
+    ];
+
+    const links = vinculos.map((v) => ({
+      source: v.source,
+      target: v.target,
+      label: v.comentario || '',
+    }));
+
+    return { nodes, links };
+  }, [materias, leituras, vinculos]);
 
   return (
-    <main style={{ padding: '30px', fontFamily: 'system-ui, -apple-system, sans-serif', backgroundColor: '#faf5f7', color: '#2d3748', minHeight: '100vh' }}>
+    <main style={{ padding: '25px', fontFamily: 'system-ui, -apple-system, sans-serif', backgroundColor: '#faf5f7', color: '#2d3748', minHeight: '100vh' }}>
       
       {/* Cabeçalho */}
       <header style={{ marginBottom: '25px', borderBottom: '2px solid #fbcfe8', paddingBottom: '15px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span style={{ fontSize: '32px' }}>🌸📚🌿</span>
-          <h1 style={{ fontSize: '28px', color: '#9d174d', margin: 0 }}>
-            Jardim Digital de Conhecimento
+          <h1 style={{ fontSize: '26px', color: '#9d174d', margin: 0 }}>
+            Jardim Digital & Acervo de Leituras
           </h1>
         </div>
-        <p style={{ color: '#047857', marginTop: '8px', fontWeight: '500' }}>
-          Construa a teia do seu curso de Biblioteconomia & Ciência da Informação do zero
+        <p style={{ color: '#047857', marginTop: '6px', fontWeight: '500', fontSize: '14px' }}>
+          Cadastre suas disciplinas, leituras e organize suas conexões conceituais
         </p>
       </header>
 
-      {/* 📝 Formulários de Cadastro Inicial */}
-      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '20px' }}>
+      {/* Painéis de Cadastro */}
+      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))', gap: '20px', marginBottom: '25px' }}>
         
-        {/* Form 1: Criar Matéria (Verde) */}
-        <form onSubmit={adicionarMateria} style={{ backgroundColor: '#ffffff', padding: '18px', borderRadius: '12px', border: '1px solid #a7f3d0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03)' }}>
-          <h3 style={{ margin: '0 0 10px 0', color: '#047857', fontSize: '15px' }}>📗 1. Cadastrar Disciplina</h3>
-          <div style={{ display: 'flex', gap: '8px' }}>
+        {/* Formulário 1: Disciplinas */}
+        <form onSubmit={handleAddMateria} style={{ backgroundColor: '#ffffff', padding: '18px', borderRadius: '12px', border: '1px solid #a7f3d0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+          <h3 style={{ margin: '0 0 12px 0', color: '#047857', fontSize: '15px' }}>📗 1. Cadastrar Disciplina</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <input
               type="text"
-              placeholder="Ex: Organização do Conhecimento..."
-              value={novaMateria}
-              onChange={(e) => setNovaMateria(e.target.value)}
-              style={{ flex: 1, padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+              placeholder="Nome da matéria (Ex: Representação Temática)"
+              value={formMateria.name}
+              onChange={(e) => setFormMateria({ ...formMateria, name: e.target.value })}
+              style={{ padding: '9px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
             />
-            <button type="submit" style={{ backgroundColor: '#10b981', color: 'white', border: 'none', padding: '10px 14px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
-              + Adicionar
+            <input
+              type="text"
+              placeholder="Sigla / Código (Ex: RTI)"
+              value={formMateria.code}
+              onChange={(e) => setFormMateria({ ...formMateria, code: e.target.value })}
+              style={{ padding: '9px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+            />
+            <button type="submit" style={{ backgroundColor: '#10b981', color: 'white', border: 'none', padding: '10px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', marginTop: '4px' }}>
+              + Salvar Disciplina
             </button>
           </div>
         </form>
 
-        {/* Form 2: Criar Leitura (Rosa) */}
-        <form onSubmit={adicionarLeitura} style={{ backgroundColor: '#ffffff', padding: '18px', borderRadius: '12px', border: '1px solid #fbcfe8', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03)' }}>
-          <h3 style={{ margin: '0 0 10px 0', color: '#be185d', fontSize: '15px' }}>🌸 2. Cadastrar Leitura / Artigo</h3>
-          <div style={{ display: 'flex', gap: '8px' }}>
+        {/* Formulário 2: Leituras */}
+        <form onSubmit={handleAddLeitura} style={{ backgroundColor: '#ffffff', padding: '18px', borderRadius: '12px', border: '1px solid #fbcfe8', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+          <h3 style={{ margin: '0 0 12px 0', color: '#be185d', fontSize: '15px' }}>🌸 2. Cadastrar Leitura</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <input
               type="text"
-              placeholder="Ex: Artigo sobre Taxonomia..."
-              value={novaLeitura}
-              onChange={(e) => setNovaLeitura(e.target.value)}
-              style={{ flex: 1, padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+              placeholder="Título da Leitura / Artigo / Livro"
+              value={formLeitura.title}
+              onChange={(e) => setFormLeitura({ ...formLeitura, title: e.target.value })}
+              style={{ padding: '9px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
             />
-            <button type="submit" style={{ backgroundColor: '#ec4899', color: 'white', border: 'none', padding: '10px 14px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
-              + Adicionar
+            <input
+              type="text"
+              placeholder="Autor(es) (Ex: Lancaster, F. W.)"
+              value={formLeitura.autor}
+              onChange={(e) => setFormLeitura({ ...formLeitura, autor: e.target.value })}
+              style={{ padding: '9px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+            />
+            <textarea
+              placeholder="Comentário ou anotações sobre a leitura (opcional)..."
+              value={formLeitura.comentario}
+              onChange={(e) => setFormLeitura({ ...formLeitura, comentario: e.target.value })}
+              rows={2}
+              style={{ padding: '9px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', resize: 'vertical' }}
+            />
+            <button type="submit" style={{ backgroundColor: '#ec4899', color: 'white', border: 'none', padding: '10px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
+              + Salvar Leitura
             </button>
           </div>
         </form>
 
       </section>
 
-      {/* 🔗 Form 3: Criar Vínculo entre Leitura e Matéria */}
+      {/* Formulário 3: Vínculos com Comentários */}
       {(materias.length > 0 && leituras.length > 0) && (
-        <form onSubmit={criarVinculo} style={{ backgroundColor: '#ffffff', padding: '18px', borderRadius: '12px', border: '2px dashed #f472b6', marginBottom: '25px' }}>
-          <h3 style={{ margin: '0 0 10px 0', color: '#9d174d', fontSize: '15px' }}>🔗 3. Conectar Leitura a uma Disciplina</h3>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+        <form onSubmit={handleAddVinculo} style={{ backgroundColor: '#ffffff', padding: '18px', borderRadius: '12px', border: '2px dashed #f472b6', marginBottom: '25px' }}>
+          <h3 style={{ margin: '0 0 12px 0', color: '#9d174d', fontSize: '15px' }}>🔗 3. Conectar Leitura à Disciplina</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px', marginBottom: '10px' }}>
             
             <select
-              value={leituraParaConectar}
-              onChange={(e) => setLeituraParaConectar(e.target.value)}
-              style={{ padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px', flex: 1, minWidth: '200px' }}
+              value={formVinculo.leituraId}
+              onChange={(e) => setFormVinculo({ ...formVinculo, leituraId: e.target.value })}
+              style={{ padding: '9px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', backgroundColor: '#fff' }}
             >
+              <option value="">-- Selecione a Leitura --</option>
               {leituras.map((l) => (
-                <option key={l.id} value={l.id}>🌸 {l.title}</option>
+                <option key={l.id} value={l.id}>🌸 {l.title} ({l.autor})</option>
               ))}
             </select>
 
-            <span style={{ fontWeight: 'bold', color: '#be185d' }}>se conecta com ➔</span>
-
             <select
-              value={materiaParaConectar}
-              onChange={(e) => setMateriaParaConectar(e.target.value)}
-              style={{ padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px', flex: 1, minWidth: '200px' }}
+              value={formVinculo.materiaId}
+              onChange={(e) => setFormVinculo({ ...formVinculo, materiaId: e.target.value })}
+              style={{ padding: '9px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', backgroundColor: '#fff' }}
             >
+              <option value="">-- Selecione a Disciplina --</option>
               {materias.map((m) => (
                 <option key={m.id} value={m.id}>📗 {m.name}</option>
               ))}
             </select>
 
-            <button type="submit" style={{ backgroundColor: '#be185d', color: 'white', border: 'none', padding: '10px 18px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
-              Conectar no Grafo
-            </button>
+            <input
+              type="text"
+              placeholder="Comentário do vínculo (ex: Leituras para P1)"
+              value={formVinculo.comentario}
+              onChange={(e) => setFormVinculo({ ...formVinculo, comentario: e.target.value })}
+              style={{ padding: '9px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+            />
           </div>
+
+          <button type="submit" style={{ backgroundColor: '#be185d', color: 'white', border: 'none', padding: '10px 18px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', width: '100%' }}>
+            Criar Conexão no Grafo
+          </button>
         </form>
       )}
 
-      {/* Legenda dos Nós */}
-      <div style={{ display: 'flex', gap: '15px', marginBottom: '12px', fontSize: '14px', fontWeight: '600' }}>
-        <span style={{ color: '#059669', backgroundColor: '#d1fae5', padding: '4px 12px', borderRadius: '20px', border: '1px solid #a7f3d0' }}>
-          📗 Disciplinas ({materias.length})
+      {/* Indicadores de Total */}
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '12px', fontSize: '13px', fontWeight: '600' }}>
+        <span style={{ color: '#059669', backgroundColor: '#d1fae5', padding: '4px 12px', borderRadius: '20px' }}>
+          📗 Disciplinas: {materias.length}
         </span>
-        <span style={{ color: '#be185d', backgroundColor: '#fce7f3', padding: '4px 12px', borderRadius: '20px', border: '1px solid #fbcfe8' }}>
-          🌸 Leituras ({leituras.length})
+        <span style={{ color: '#be185d', backgroundColor: '#fce7f3', padding: '4px 12px', borderRadius: '20px' }}>
+          🌸 Leituras: {leituras.length}
         </span>
         <span style={{ color: '#9d174d', backgroundColor: '#fbcfe8', padding: '4px 12px', borderRadius: '20px' }}>
-          🔗 Vínculos ({vinculos.length})
+          🔗 Vínculos: {vinculos.length}
         </span>
       </div>
 
       {/* Grafo Interativo */}
-      <div style={{ height: '480px', border: '2px solid #fbcfe8', borderRadius: '16px', overflow: 'hidden', marginBottom: '40px', boxShadow: '0 10px 25px -5px rgba(244, 114, 182, 0.15)' }}>
+      <div style={{ height: '480px', border: '2px solid #fbcfe8', borderRadius: '16px', overflow: 'hidden', marginBottom: '35px', boxShadow: '0 8px 20px -4px rgba(244, 114, 182, 0.15)' }}>
         <ForceGraph2D
+          key="grafo-estavel"
           graphData={graphData}
           nodeLabel="name"
           nodeColor={(node) => (node.group === 'materia' ? '#10b981' : '#ec4899')}
@@ -186,6 +242,56 @@ export default function Home() {
           backgroundColor="#fcf8fa"
         />
       </div>
+
+      {/* Lista / Registro dos Itens Cadastrados */}
+      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+        
+        {/* Lista de Leituras */}
+        <div style={{ backgroundColor: '#fff', padding: '18px', borderRadius: '12px', border: '1px solid #fbcfe8' }}>
+          <h3 style={{ margin: '0 0 15px 0', color: '#be185d', fontSize: '16px', borderBottom: '1px solid #fbcfe8', paddingBottom: '8px' }}>
+            📖 Leituras Registradas
+          </h3>
+          {leituras.length === 0 ? (
+            <p style={{ fontSize: '13px', color: '#94a3b8' }}>Nenhuma leitura cadastrada ainda.</p>
+          ) : (
+            leituras.map((l) => (
+              <div key={l.id} style={{ marginBottom: '12px', padding: '10px', borderRadius: '8px', backgroundColor: '#fdf2f8', borderLeft: '3px solid #ec4899' }}>
+                <strong style={{ color: '#831843', fontSize: '14px' }}>{l.title}</strong>
+                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#9d174d' }}>✍️ <b>Autor:</b> {l.autor}</p>
+                {l.comentario && <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#475569', italic: 'true' }}>💬 "{l.comentario}"</p>}
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Lista de Vínculos */}
+        <div style={{ backgroundColor: '#fff', padding: '18px', borderRadius: '12px', border: '1px solid #a7f3d0' }}>
+          <h3 style={{ margin: '0 0 15px 0', color: '#047857', fontSize: '16px', borderBottom: '1px solid #a7f3d0', paddingBottom: '8px' }}>
+            🔗 Conexões & Comentários
+          </h3>
+          {vinculos.length === 0 ? (
+            <p style={{ fontSize: '13px', color: '#94a3b8' }}>Nenhum vínculo criado ainda.</p>
+          ) : (
+            vinculos.map((v) => {
+              const lei = leituras.find((l) => l.id === (v.source.id || v.source));
+              const mat = materias.find((m) => m.id === (v.target.id || v.target));
+              return (
+                <div key={v.id} style={{ marginBottom: '12px', padding: '10px', borderRadius: '8px', backgroundColor: '#ecfdf5', borderLeft: '3px solid #10b981' }}>
+                  <div style={{ fontSize: '13px', color: '#065f46' }}>
+                    <b>🌸 {lei?.title || 'Leitura'}</b> ➔ <b>📗 {mat?.name || 'Disciplina'}</b>
+                  </div>
+                  {v.comentario && (
+                    <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#047857' }}>
+                      💬 <b>Nota do Vínculo:</b> {v.comentario}
+                    </p>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+
+      </section>
 
     </main>
   );
