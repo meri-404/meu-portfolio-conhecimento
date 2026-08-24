@@ -172,7 +172,7 @@ export default function Home() {
 
     // Matéria = flor branca | Leitura = flor rosa
     const petalColor = isMateria ? '#ffffff' : '#f4a6bc';
-    const centerColor = '#fcd34d'; // Amarelo vibrante/suave
+    const centerColor = '#fcd34d'; // Miolo amarelo
     const numPetals = 5;
     const petalDistance = 6;
     const petalRadius = 4.5;
@@ -215,13 +215,13 @@ export default function Home() {
       style={{
         padding: '30px 20px',
         fontFamily: 'system-ui, -apple-system, sans-serif',
-        backgroundColor: '#eaf3ed', // Verde bem claro
+        backgroundColor: '#F9D1D9', // Fundo Rosa
         color: '#2d4a3e',
         minHeight: '100vh',
       }}
     >
       {/* Cabeçalho */}
-      <header style={{ marginBottom: '30px', borderBottom: '2px solid #b2d8c3', paddingBottom: '15px' }}>
+      <header style={{ marginBottom: '30px', borderBottom: '2px solid #ffffff', paddingBottom: '15px' }}>
         <h1 style={{ fontSize: '34px', color: '#2d4a3e', margin: 0, fontWeight: '700', letterSpacing: '-0.5px' }}>
           🌸 Jardim de Leituras 📚
         </h1>
@@ -284,7 +284,6 @@ export default function Home() {
               <option value="__NOVO__">➕ Outro autor / Digitar novo...</option>
             </select>
 
-            {/* Campo para novo autor se selecionar "__NOVO__" ou se não houver autores salvos */}
             {(formLeitura.autorSelect === '__NOVO__' || autoresCadastrados.length === 0) && (
               <input
                 type="text"
@@ -387,22 +386,22 @@ export default function Home() {
         </span>
       </div>
 
-      {/* Grafo Interativo com Flores */}
-      <div style={{ height: '480px', borderRadius: '16px', overflow: 'hidden', marginBottom: '35px', backgroundColor: '#ffffff', boxShadow: '0 8px 24px rgba(0,0,0,0.05)' }}>
+      {/* Grafo Interativo com Fundo Verde Claro */}
+      <div style={{ height: '480px', borderRadius: '16px', overflow: 'hidden', marginBottom: '35px', backgroundColor: '#eaf3ed', boxShadow: '0 8px 24px rgba(0,0,0,0.05)' }}>
         <ForceGraph2D
           key="grafo-estavel"
           graphData={graphData}
           nodeCanvasObject={drawFlowerNode}
           linkColor={() => '#4a7c59'}
           linkWidth={2}
-          backgroundColor="#ffffff"
+          backgroundColor="#eaf3ed" // Fundo Verde Claro
         />
       </div>
 
       {/* Painéis Inferiores */}
       <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
         
-        {/* Lista de Disciplinas (com opção de exclusão) */}
+        {/* Lista de Disciplinas */}
         <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.04)' }}>
           <h3 style={{ margin: '0 0 15px 0', color: '#4a7c59', fontSize: '16px', borderBottom: '2px solid #b2d8c3', paddingBottom: '8px', fontWeight: 'bold' }}>
             📗 Disciplinas
@@ -427,7 +426,7 @@ export default function Home() {
           )}
         </div>
 
-        {/* Leituras por Autor (com opção de exclusão) */}
+        {/* Leituras por Autor */}
         <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.04)' }}>
           <h3 style={{ margin: '0 0 15px 0', color: '#d97792', fontSize: '16px', borderBottom: '2px solid #f4a6bc', paddingBottom: '8px', fontWeight: 'bold' }}>
             ✍️ Leituras por Autor
@@ -460,7 +459,7 @@ export default function Home() {
           )}
         </div>
 
-        {/* Lista de Vínculos (com opção de exclusão) */}
+        {/* Lista de Vínculos */}
         <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.04)' }}>
           <h3 style={{ margin: '0 0 15px 0', color: '#4a7c59', fontSize: '16px', borderBottom: '2px solid #b2d8c3', paddingBottom: '8px', fontWeight: 'bold' }}>
             🔗 Conexões Registradas
