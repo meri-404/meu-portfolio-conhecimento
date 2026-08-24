@@ -115,21 +115,19 @@ export default function Home() {
       style={{
         padding: '30px 20px',
         fontFamily: 'system-ui, -apple-system, sans-serif',
-        backgroundColor: '#838F58',
-        backgroundImage: `linear-gradient(rgba(131, 143, 88, 0.88), rgba(131, 143, 88, 0.88)), url('https://images.unsplash.com/photo-1526047932273-341f2a7631f9?q=80&w=1000&auto=format&fit=crop')`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundAttachment: 'fixed',
-        color: '#F9D1D9',
+        backgroundColor: '#faf7f2',
+        backgroundImage: `url('https://img.freepik.com/free-vector/hand-drawn-floral-pattern-design_23-2149495147.jpg')`,
+        backgroundRepeat: 'repeat',
+        backgroundSize: '350px auto',
         minHeight: '100vh',
       }}
     >
       {/* Cabeçalho */}
-      <header style={{ marginBottom: '30px', borderBottom: '2px solid #F9D1D9', paddingBottom: '15px' }}>
-        <h1 style={{ fontSize: '34px', color: '#F9D1D9', margin: 0, fontWeight: '700', letterSpacing: '-0.5px' }}>
+      <header style={{ marginBottom: '30px', borderBottom: '2px solid #F9D1D9', paddingBottom: '15px', backgroundColor: 'rgba(255, 255, 255, 0.85)', padding: '20px', borderRadius: '12px', backdropFilter: 'blur(4px)' }}>
+        <h1 style={{ fontSize: '34px', color: '#575527', margin: 0, fontWeight: '700', letterSpacing: '-0.5px' }}>
           🌸 Jardim de Leituras 📚
         </h1>
-        <p style={{ color: '#ffffff', marginTop: '8px', fontSize: '15px', opacity: 0.95, fontWeight: '500' }}>
+        <p style={{ color: '#838F58', marginTop: '8px', fontSize: '15px', fontWeight: '600' }}>
           Cadastre suas disciplinas, leituras e organize suas conexões conceituais
         </p>
       </header>
@@ -138,7 +136,7 @@ export default function Home() {
       <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '25px' }}>
         
         {/* Cadastro de Disciplina */}
-        <form style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', border: '2px solid #F9D1D9', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} onSubmit={handleAddMateria}>
+        <form style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', border: '2px solid #F9D1D9', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }} onSubmit={handleAddMateria}>
           <h3 style={{ margin: '0 0 14px 0', color: '#575527', fontSize: '15px', fontWeight: 'bold' }}>📗 1. Cadastrar Disciplina</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <input
@@ -162,7 +160,7 @@ export default function Home() {
         </form>
 
         {/* Cadastro de Leitura */}
-        <form style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', border: '2px solid #F9D1D9', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} onSubmit={handleAddLeitura}>
+        <form style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', border: '2px solid #F9D1D9', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }} onSubmit={handleAddLeitura}>
           <h3 style={{ margin: '0 0 14px 0', color: '#838F58', fontSize: '15px', fontWeight: 'bold' }}>📖 2. Cadastrar Leitura</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <input
@@ -196,7 +194,7 @@ export default function Home() {
 
       {/* Conectar Vínculo */}
       {(materias.length > 0 && leituras.length > 0) && (
-        <form style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', border: '2px solid #F9D1D9', marginBottom: '25px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} onSubmit={handleAddVinculo}>
+        <form style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', border: '2px solid #F9D1D9', marginBottom: '25px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }} onSubmit={handleAddVinculo}>
           <h3 style={{ margin: '0 0 14px 0', color: '#575527', fontSize: '15px', fontWeight: 'bold' }}>🔗 3. Conectar Leitura à Disciplina</h3>
           
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px', marginBottom: '12px' }}>
@@ -272,7 +270,7 @@ export default function Home() {
       </div>
 
       {/* Grafo Interativo */}
-      <div style={{ height: '480px', border: '3px solid #F9D1D9', borderRadius: '16px', overflow: 'hidden', marginBottom: '35px', backgroundColor: '#ffffff', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
+      <div style={{ height: '480px', border: '3px solid #F9D1D9', borderRadius: '16px', overflow: 'hidden', marginBottom: '35px', backgroundColor: '#ffffff', boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}>
         <ForceGraph2D
           key="grafo-estavel"
           graphData={graphData}
@@ -288,7 +286,7 @@ export default function Home() {
       <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
         
         {/* Leituras por Autor */}
-        <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', border: '2px solid #F9D1D9', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
+        <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', border: '2px solid #F9D1D9', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
           <h3 style={{ margin: '0 0 15px 0', color: '#838F58', fontSize: '16px', borderBottom: '2px solid #F9D1D9', paddingBottom: '8px', fontWeight: 'bold' }}>
             ✍️ Leituras por Autor
           </h3>
@@ -312,7 +310,7 @@ export default function Home() {
         </div>
 
         {/* Lista de Vínculos */}
-        <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', border: '2px solid #F9D1D9', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
+        <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', border: '2px solid #F9D1D9', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
           <h3 style={{ margin: '0 0 15px 0', color: '#838F58', fontSize: '16px', borderBottom: '2px solid #F9D1D9', paddingBottom: '8px', fontWeight: 'bold' }}>
             🔗 Conexões Registradas
           </h3>
