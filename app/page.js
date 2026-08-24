@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 
 const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), { ssr: false });
@@ -9,18 +9,40 @@ export default function Home() {
   const [materias, setMaterias] = useState([]);
   const [leituras, setLeituras] = useState([]);
   const [vinculos, setVinculos] = useState([]);
+  const [carregado, setCarregado] = useState(false);
 
   const [formMateria, setFormMateria] = useState({ name: '', code: '' });
   const [formLeitura, setFormLeitura] = useState({ title: '', autor: '', comentario: '' });
   const [formVinculo, setFormVinculo] = useState({ leituraId: '', materiaId: '', comentario: '' });
+
+  // Carregar dados salvos no localStorage ao abrir
+  useEffect(() => {
+    const matSalvas = localStorage.getItem('jardim_materias');
+    const leiSalvas = localStorage.getItem('jardim_leituras');
+    const vinSalvos = localStorage.getItem('jardim_vinculos');
+
+    if (matSalvas) setMaterias(JSON.parse(matSalvas));
+    if (leiSalvas) setLeituras(JSON.parse(leiSalvas));
+    if (vinSalvos) setVinculos(JSON.parse(vinSalvos));
+
+    setCarregado(true);
+  }, []);
+
+  // Salvar no localStorage sempre que houver mudanças
+  useEffect(() => {
+    if (carregado) {
+      localStorage.setItem('jardim_materias', JSON.stringify(materias));
+      localStorage.setItem('jardim_leituras', JSON.stringify(leituras));
+      localStorage.setItem('jardim_vinculos', JSON.stringify(vinculos));
+    }
+  }, [materias, leituras, vinculos, carregado]);
 
   const handleAddMateria = (e) => {
     e.preventDefault();
     const nomeLimpo = formMateria.name.trim();
     if (!nomeLimpo) return;
 
-    const jaExiste = materias.some((m) => m.name.toLowerCase() === nomeLimpo.toLowerCase());
-    if (jaExiste) {
+    if (materias.some((m) => m.name.toLowerCase() === nomeLimpo.toLowerCase())) {
       alert('Esta disciplina já está cadastrada!');
       return;
     }
@@ -89,15 +111,13 @@ export default function Home() {
     const nodes = [
       ...materias.map((m) => ({
         id: m.id,
-        name: `📖 Disciplina: ${m.name} (${m.code})`,
+        name: `${m.name} (${m.code})`,
         group: 'materia',
-        val: 14,
       })),
       ...leituras.map((l) => ({
         id: l.id,
-        name: `📚 Leitura: ${l.title}\n✍️ Autor: ${l.autor}`,
+        name: `${l.title}\n${l.autor}`,
         group: 'leitura',
-        val: 9,
       })),
     ];
 
@@ -110,24 +130,62 @@ export default function Home() {
     return { nodes, links };
   }, [materias, leituras, vinculos]);
 
+  // Função customizada para desenhar os nós como flores fofas
+  const drawFlowerNode = (node, ctx, globalScale) => {
+    const x = node.x;
+    const y = node.y;
+    const isMateria = node.group === 'materia';
+
+    // Tamanho e cores das pétalas
+    const petalColor = isMateria ? '#838F58' : '#ffffff';
+    const centerColor = isMateria ? '#575527' : '#F9D1D9';
+    const numPetals = 5;
+    const petalDistance = 6;
+    const petalRadius = 4;
+
+    // Desenha as pétalas
+    ctx.fillStyle = petalColor;
+    for (let i = 0; i < numPetals; i++) {
+      const angle = (i * 2 * Math.PI) / numPetals;
+      const px = x + petalDistance * Math.cos(angle);
+      const py = y + petalDistance * Math.sin(angle);
+
+      ctx.beginPath();
+      ctx.arc(px, py, petalRadius, 0, 2 * Math.PI, false);
+      ctx.fill();
+    }
+
+    // Desenha o miolo
+    ctx.beginPath();
+    ctx.arc(x, y, 4.5, 0, 2 * Math.PI, false);
+    ctx.fillStyle = centerColor;
+    ctx.fill();
+
+    // Texto do nome abaixo da flor
+    const fontSize = 11 / globalScale;
+    ctx.font = `${fontSize}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = '#575527';
+    ctx.fillText(node.name.split('\n')[0], x, y + 10);
+  };
+
   return (
     <main
       style={{
         padding: '30px 20px',
         fontFamily: 'system-ui, -apple-system, sans-serif',
-        backgroundColor: '#faf7f2',
-        backgroundImage: `url('https://img.freepik.com/free-vector/hand-drawn-floral-pattern-design_23-2149495147.jpg')`,
-        backgroundRepeat: 'repeat',
-        backgroundSize: '350px auto',
+        backgroundColor: '#F9D1D9',
+        color: '#575527',
         minHeight: '100vh',
       }}
     >
       {/* Cabeçalho */}
-      <header style={{ marginBottom: '30px', borderBottom: '2px solid #F9D1D9', paddingBottom: '15px', backgroundColor: 'rgba(255, 255, 255, 0.85)', padding: '20px', borderRadius: '12px', backdropFilter: 'blur(4px)' }}>
+      <header style={{ marginBottom: '30px', borderBottom: '2px solid #ffffff', paddingBottom: '15px' }}>
         <h1 style={{ fontSize: '34px', color: '#575527', margin: 0, fontWeight: '700', letterSpacing: '-0.5px' }}>
           🌸 Jardim de Leituras 📚
         </h1>
-        <p style={{ color: '#838F58', marginTop: '8px', fontSize: '15px', fontWeight: '600' }}>
+        <p style={{ color: '#575527', marginTop: '8px', fontSize: '15px', fontWeight: '500' }}>
           Cadastre suas disciplinas, leituras e organize suas conexões conceituais
         </p>
       </header>
@@ -136,8 +194,8 @@ export default function Home() {
       <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '25px' }}>
         
         {/* Cadastro de Disciplina */}
-        <form style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', border: '2px solid #F9D1D9', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }} onSubmit={handleAddMateria}>
-          <h3 style={{ margin: '0 0 14px 0', color: '#575527', fontSize: '15px', fontWeight: 'bold' }}>📗 1. Cadastrar Disciplina</h3>
+        <form style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }} onSubmit={handleAddMateria}>
+          <h3 style={{ margin: '0 0 14px 0', color: '#838F58', fontSize: '15px', fontWeight: 'bold' }}>📗 1. Cadastrar Disciplina</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <input
               type="text"
@@ -160,8 +218,8 @@ export default function Home() {
         </form>
 
         {/* Cadastro de Leitura */}
-        <form style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', border: '2px solid #F9D1D9', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }} onSubmit={handleAddLeitura}>
-          <h3 style={{ margin: '0 0 14px 0', color: '#838F58', fontSize: '15px', fontWeight: 'bold' }}>📖 2. Cadastrar Leitura</h3>
+        <form style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }} onSubmit={handleAddLeitura}>
+          <h3 style={{ margin: '0 0 14px 0', color: '#575527', fontSize: '15px', fontWeight: 'bold' }}>📖 2. Cadastrar Leitura</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <input
               type="text"
@@ -194,7 +252,7 @@ export default function Home() {
 
       {/* Conectar Vínculo */}
       {(materias.length > 0 && leituras.length > 0) && (
-        <form style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', border: '2px solid #F9D1D9', marginBottom: '25px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }} onSubmit={handleAddVinculo}>
+        <form style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', marginBottom: '25px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }} onSubmit={handleAddVinculo}>
           <h3 style={{ margin: '0 0 14px 0', color: '#575527', fontSize: '15px', fontWeight: 'bold' }}>🔗 3. Conectar Leitura à Disciplina</h3>
           
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px', marginBottom: '12px' }}>
@@ -258,26 +316,25 @@ export default function Home() {
 
       {/* Indicadores */}
       <div style={{ display: 'flex', gap: '12px', marginBottom: '15px', fontSize: '13px', fontWeight: 'bold' }}>
-        <span style={{ color: '#575527', backgroundColor: '#ffffff', padding: '6px 14px', borderRadius: '20px', border: '1px solid #F9D1D9' }}>
+        <span style={{ color: '#575527', backgroundColor: '#ffffff', padding: '6px 14px', borderRadius: '20px' }}>
           📗 Disciplinas: {materias.length}
         </span>
-        <span style={{ color: '#575527', backgroundColor: '#F9D1D9', padding: '6px 14px', borderRadius: '20px' }}>
+        <span style={{ color: '#ffffff', backgroundColor: '#838F58', padding: '6px 14px', borderRadius: '20px' }}>
           📚 Leituras: {leituras.length}
         </span>
-        <span style={{ color: '#ffffff', backgroundColor: '#838F58', padding: '6px 14px', borderRadius: '20px', border: '1px solid #F9D1D9' }}>
+        <span style={{ color: '#575527', backgroundColor: '#ffffff', padding: '6px 14px', borderRadius: '20px' }}>
           🔗 Conexões: {vinculos.length}
         </span>
       </div>
 
-      {/* Grafo Interativo */}
-      <div style={{ height: '480px', border: '3px solid #F9D1D9', borderRadius: '16px', overflow: 'hidden', marginBottom: '35px', backgroundColor: '#ffffff', boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}>
+      {/* Grafo Interativo com Flores */}
+      <div style={{ height: '480px', borderRadius: '16px', overflow: 'hidden', marginBottom: '35px', backgroundColor: '#ffffff', boxShadow: '0 8px 24px rgba(0,0,0,0.05)' }}>
         <ForceGraph2D
           key="grafo-estavel"
           graphData={graphData}
-          nodeLabel="name"
-          nodeColor={(node) => (node.group === 'materia' ? '#838F58' : '#F9D1D9')}
-          linkColor={() => '#F9D1D9'}
-          linkWidth={2.5}
+          nodeCanvasObject={drawFlowerNode}
+          linkColor={() => '#838F58'}
+          linkWidth={2}
           backgroundColor="#ffffff"
         />
       </div>
@@ -286,7 +343,7 @@ export default function Home() {
       <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
         
         {/* Leituras por Autor */}
-        <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', border: '2px solid #F9D1D9', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+        <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
           <h3 style={{ margin: '0 0 15px 0', color: '#838F58', fontSize: '16px', borderBottom: '2px solid #F9D1D9', paddingBottom: '8px', fontWeight: 'bold' }}>
             ✍️ Leituras por Autor
           </h3>
@@ -310,7 +367,7 @@ export default function Home() {
         </div>
 
         {/* Lista de Vínculos */}
-        <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', border: '2px solid #F9D1D9', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+        <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
           <h3 style={{ margin: '0 0 15px 0', color: '#838F58', fontSize: '16px', borderBottom: '2px solid #F9D1D9', paddingBottom: '8px', fontWeight: 'bold' }}>
             🔗 Conexões Registradas
           </h3>
