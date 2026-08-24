@@ -6,12 +6,12 @@ import dynamic from 'next/dynamic';
 const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), { ssr: false });
 
 export default function Home() {
-  // Estados dos dados mantidos
+  // Estados principais
   const [materias, setMaterias] = useState([]);
   const [leituras, setLeituras] = useState([]);
   const [vinculos, setVinculos] = useState([]);
 
-  // Estados dos formulários (isolados para não re-renderizar o grafo a cada letra)
+  // Estados dos formulários
   const [formMateria, setFormMateria] = useState({ name: '', code: '' });
   const [formLeitura, setFormLeitura] = useState({ title: '', autor: '', comentario: '' });
   const [formVinculo, setFormVinculo] = useState({ leituraId: '', materiaId: '', comentario: '' });
@@ -19,11 +19,18 @@ export default function Home() {
   // 1. Adicionar Matéria
   const handleAddMateria = (e) => {
     e.preventDefault();
-    if (!formMateria.name.trim()) return;
+    const nomeLimpo = formMateria.name.trim();
+    if (!nomeLimpo) return;
+
+    const jaExiste = materias.some((m) => m.name.toLowerCase() === nomeLimpo.toLowerCase());
+    if (jaExiste) {
+      alert('Esta matéria já está cadastrada!');
+      return;
+    }
 
     const novaMateria = {
       id: `m-${Date.now()}`,
-      name: formMateria.name.trim(),
+      name: nomeLimpo,
       code: formMateria.code.trim() || 'DISC',
     };
 
@@ -39,7 +46,7 @@ export default function Home() {
     const novaLeitura = {
       id: `l-${Date.now()}`,
       title: formLeitura.title.trim(),
-      autor: formLeitura.autor.trim() || 'Autor não informado',
+      autor: formLeitura.autor.trim() || 'Autor Desconhecido',
       comentario: formLeitura.comentario.trim(),
     };
 
@@ -47,19 +54,10 @@ export default function Home() {
     setFormLeitura({ title: '', autor: '', comentario: '' });
   };
 
-  // 3. Adicionar Vínculo entre Leitura e Matéria
+  // 3. Adicionar Vínculo (com validação anti-duplicidade)
   const handleAddVinculo = (e) => {
     e.preventDefault();
     if (!formVinculo.leituraId || !formVinculo.materiaId) return;
-
-    const jaExiste = vinculos.some(
-      (v) => v.source === formVinculo.leituraId && v.target === formVinculo.materiaId
-    );
-
-    if (jaExiste) {
-      alert('Este vínculo já foi criado!');
-      return;
-    }
 
     const novoVinculo = {
       id: `v-${Date.now()}`,
@@ -72,7 +70,30 @@ export default function Home() {
     setFormVinculo({ leituraId: '', materiaId: '', comentario: '' });
   };
 
-  // 4. Estrutura do Grafo memoizada (só reprocessa quando uma matéria, leitura ou vínculo for efetivamente adicionado)
+  // 4. Filtrar disciplinas disponíveis para a leitura selecionada (evita repetir conexões)
+  const materiasDisponiveis = useMemo(() => {
+    if (!formVinculo.leituraId) return materias;
+
+    // Obtém os IDs de matérias que já possuem vínculo com a leitura escolhida
+    const materiasJaConectadas = vinculos
+      .filter((v) => (v.source.id || v.source) === formVinculo.leituraId)
+      .map((v) => v.target.id || v.target);
+
+    return materias.filter((m) => !materiasJaConectadas.includes(m.id));
+  }, [formVinculo.leituraId, materias, vinculos]);
+
+  // 5. Agrupar leituras por Autor
+  const leiturasPorAutor = useMemo(() => {
+    const grupos = {};
+    leituras.forEach((l) => {
+      const autor = l.autor || 'Autor Desconhecido';
+      if (!grupos[autor]) grupos[autor] = [];
+      grupos[autor].push(l);
+    });
+    return grupos;
+  }, [leituras]);
+
+  // 6. Estrutura do Grafo memoizada
   const graphData = useMemo(() => {
     const nodes = [
       ...materias.map((m) => ({
@@ -83,7 +104,7 @@ export default function Home() {
       })),
       ...leituras.map((l) => ({
         id: l.id,
-        name: `🌸 ${l.title}\n✍️ Autor: ${l.autor}`,
+        name: `🌸 ${l.title}\n✍️ ${l.autor}`,
         group: 'leitura',
         val: 9,
       })),
@@ -110,14 +131,14 @@ export default function Home() {
           </h1>
         </div>
         <p style={{ color: '#047857', marginTop: '6px', fontWeight: '500', fontSize: '14px' }}>
-          Cadastre suas disciplinas, leituras e organize suas conexões conceituais
+          Cadastre suas disciplinas, leituras e conecte ideias sem repetir dados
         </p>
       </header>
 
-      {/* Painéis de Cadastro */}
+      {/* Formatos de Cadastro */}
       <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))', gap: '20px', marginBottom: '25px' }}>
         
-        {/* Formulário 1: Disciplinas */}
+        {/* Form 1: Disciplinas */}
         <form onSubmit={handleAddMateria} style={{ backgroundColor: '#ffffff', padding: '18px', borderRadius: '12px', border: '1px solid #a7f3d0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
           <h3 style={{ margin: '0 0 12px 0', color: '#047857', fontSize: '15px' }}>📗 1. Cadastrar Disciplina</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -141,7 +162,7 @@ export default function Home() {
           </div>
         </form>
 
-        {/* Formulário 2: Leituras */}
+        {/* Form 2: Leituras */}
         <form onSubmit={handleAddLeitura} style={{ backgroundColor: '#ffffff', padding: '18px', borderRadius: '12px', border: '1px solid #fbcfe8', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
           <h3 style={{ margin: '0 0 12px 0', color: '#be185d', fontSize: '15px' }}>🌸 2. Cadastrar Leitura</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -174,44 +195,68 @@ export default function Home() {
 
       </section>
 
-      {/* Formulário 3: Vínculos com Comentários */}
+      {/* Form 3: Vínculos (Sem opções repetidas) */}
       {(materias.length > 0 && leituras.length > 0) && (
         <form onSubmit={handleAddVinculo} style={{ backgroundColor: '#ffffff', padding: '18px', borderRadius: '12px', border: '2px dashed #f472b6', marginBottom: '25px' }}>
           <h3 style={{ margin: '0 0 12px 0', color: '#9d174d', fontSize: '15px' }}>🔗 3. Conectar Leitura à Disciplina</h3>
+          
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px', marginBottom: '10px' }}>
             
+            {/* Seleção de Leitura */}
             <select
               value={formVinculo.leituraId}
-              onChange={(e) => setFormVinculo({ ...formVinculo, leituraId: e.target.value })}
+              onChange={(e) => setFormVinculo({ ...formVinculo, leituraId: e.target.value, materiaId: '' })}
               style={{ padding: '9px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', backgroundColor: '#fff' }}
             >
-              <option value="">-- Selecione a Leitura --</option>
+              <option value="">-- 1º Selecione a Leitura --</option>
               {leituras.map((l) => (
                 <option key={l.id} value={l.id}>🌸 {l.title} ({l.autor})</option>
               ))}
             </select>
 
+            {/* Seleção de Matéria (só exibe matérias não conectadas ainda) */}
             <select
               value={formVinculo.materiaId}
               onChange={(e) => setFormVinculo({ ...formVinculo, materiaId: e.target.value })}
+              disabled={!formVinculo.leituraId || materiasDisponiveis.length === 0}
               style={{ padding: '9px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', backgroundColor: '#fff' }}
             >
-              <option value="">-- Selecione a Disciplina --</option>
-              {materias.map((m) => (
+              <option value="">
+                {!formVinculo.leituraId
+                  ? '-- Selecione uma leitura primeiro --'
+                  : materiasDisponiveis.length === 0
+                  ? '⚠️ Já conectada a todas disciplinas!'
+                  : '-- 2º Selecione a Disciplina Disponível --'}
+              </option>
+              {materiasDisponiveis.map((m) => (
                 <option key={m.id} value={m.id}>📗 {m.name}</option>
               ))}
             </select>
 
+            {/* Comentário do Vínculo */}
             <input
               type="text"
-              placeholder="Comentário do vínculo (ex: Leituras para P1)"
+              placeholder="Comentário do vínculo (ex: P1 / Cap. 2)"
               value={formVinculo.comentario}
               onChange={(e) => setFormVinculo({ ...formVinculo, comentario: e.target.value })}
               style={{ padding: '9px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
             />
           </div>
 
-          <button type="submit" style={{ backgroundColor: '#be185d', color: 'white', border: 'none', padding: '10px 18px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', width: '100%' }}>
+          <button
+            type="submit"
+            disabled={!formVinculo.leituraId || !formVinculo.materiaId}
+            style={{
+              backgroundColor: (!formVinculo.leituraId || !formVinculo.materiaId) ? '#cbd5e1' : '#be185d',
+              color: 'white',
+              border: 'none',
+              padding: '10px 18px',
+              borderRadius: '6px',
+              fontWeight: 'bold',
+              cursor: (!formVinculo.leituraId || !formVinculo.materiaId) ? 'not-allowed' : 'pointer',
+              width: '100%',
+            }}
+          >
             Criar Conexão no Grafo
           </button>
         </form>
@@ -243,31 +288,37 @@ export default function Home() {
         />
       </div>
 
-      {/* Lista / Registro dos Itens Cadastrados */}
+      {/* Painéis Inferiores: Leituras Agrupadas por Autor & Conexões */}
       <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
         
-        {/* Lista de Leituras */}
+        {/* Painel por Autores */}
         <div style={{ backgroundColor: '#fff', padding: '18px', borderRadius: '12px', border: '1px solid #fbcfe8' }}>
           <h3 style={{ margin: '0 0 15px 0', color: '#be185d', fontSize: '16px', borderBottom: '1px solid #fbcfe8', paddingBottom: '8px' }}>
-            📖 Leituras Registradas
+            ✍️ Leituras Agrupadas por Autor
           </h3>
-          {leituras.length === 0 ? (
+          {Object.keys(leiturasPorAutor).length === 0 ? (
             <p style={{ fontSize: '13px', color: '#94a3b8' }}>Nenhuma leitura cadastrada ainda.</p>
           ) : (
-            leituras.map((l) => (
-              <div key={l.id} style={{ marginBottom: '12px', padding: '10px', borderRadius: '8px', backgroundColor: '#fdf2f8', borderLeft: '3px solid #ec4899' }}>
-                <strong style={{ color: '#831843', fontSize: '14px' }}>{l.title}</strong>
-                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#9d174d' }}>✍️ <b>Autor:</b> {l.autor}</p>
-                {l.comentario && <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#475569', italic: 'true' }}>💬 "{l.comentario}"</p>}
+            Object.entries(leiturasPorAutor).map(([autor, listaObras]) => (
+              <div key={autor} style={{ marginBottom: '16px', padding: '12px', borderRadius: '8px', backgroundColor: '#fdf2f8', border: '1px solid #fbcfe8' }}>
+                <div style={{ fontWeight: 'bold', color: '#9d174d', fontSize: '14px', marginBottom: '6px' }}>
+                  👤 Autor: {autor} <span style={{ fontSize: '11px', fontWeight: 'normal', color: '#be185d' }}>({listaObras.length} obra{listaObras.length > 1 ? 's' : ''})</span>
+                </div>
+                {listaObras.map((ob) => (
+                  <div key={ob.id} style={{ marginLeft: '10px', paddingLeft: '8px', borderLeft: '2px solid #ec4899', marginTop: '6px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: '600', color: '#334155' }}>🌸 {ob.title}</div>
+                    {ob.comentario && <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#64748b', fontStyle: 'italic' }}>"{ob.comentario}"</p>}
+                  </div>
+                ))}
               </div>
             ))
           )}
         </div>
 
-        {/* Lista de Vínculos */}
+        {/* Lista de Vínculos / Conexões */}
         <div style={{ backgroundColor: '#fff', padding: '18px', borderRadius: '12px', border: '1px solid #a7f3d0' }}>
           <h3 style={{ margin: '0 0 15px 0', color: '#047857', fontSize: '16px', borderBottom: '1px solid #a7f3d0', paddingBottom: '8px' }}>
-            🔗 Conexões & Comentários
+            🔗 Conexões & Notas dos Vínculos
           </h3>
           {vinculos.length === 0 ? (
             <p style={{ fontSize: '13px', color: '#94a3b8' }}>Nenhum vínculo criado ainda.</p>
@@ -282,7 +333,7 @@ export default function Home() {
                   </div>
                   {v.comentario && (
                     <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#047857' }}>
-                      💬 <b>Nota do Vínculo:</b> {v.comentario}
+                      💬 <b>Nota:</b> {v.comentario}
                     </p>
                   )}
                 </div>
